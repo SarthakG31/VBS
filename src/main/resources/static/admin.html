@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - VBS</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: 'Inter', -apple-system, sans-serif;
+        background: #0a0e27;
+        min-height: 100vh;
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        overflow-x: hidden;
+    }
+    body::before {
+        content: ''; position: absolute; width: 100%; height: 100%;
+        background: radial-gradient(circle at 20% 50%, rgba(168, 85, 247, 0.2) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 20%, rgba(99, 102, 241, 0.2) 0%, transparent 50%);
+        animation: gradientShift 15s ease infinite; z-index: -2;
+    }
+    @keyframes gradientShift { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.05); } }
+    .grid-background {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background-image: linear-gradient(rgba(99, 102, 241, 0.1) 1px, transparent 1px),
+                          linear-gradient(90deg, rgba(99, 102, 241, 0.1) 1px, transparent 1px);
+        background-size: 50px 50px; animation: gridMove 20s linear infinite;
+        perspective: 1000px; transform: rotateX(60deg); z-index: -1;
+    }
+    @keyframes gridMove { 0% { transform: translateY(0) rotateX(60deg); } 100% { transform: translateY(50px) rotateX(60deg); } }
+
+    .container {
+        width: 98%; max-width: 1200px; background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(40px); border-radius: 32px;
+        box-shadow: 0 0 80px rgba(99, 102, 241, 0.3), 0 0 0 1px rgba(99, 102, 241, 0.3);
+        overflow: hidden; position: relative; z-index: 1;
+    }
+    .header {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2));
+        padding: 30px 40px; display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 1px solid rgba(99, 102, 241, 0.3);
+    }
+    .header h1 { font-size: 32px; letter-spacing: 4px; background: linear-gradient(135deg, #fff, #a5b4fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .btn-header { padding: 10px 20px; background: rgba(30, 41, 59, 0.6); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4); border-radius: 12px; cursor: pointer; font-weight: 600; text-decoration: none; transition: 0.3s; }
+    .btn-header:hover { background: #6366f1; color: white; }
+
+    .content { padding: 40px; }
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+    .section-header h2 { color: #fff; font-size: 24px; background: linear-gradient(135deg, #fff, #a5b4fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .stat-card { background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(99, 102, 241, 0.2); padding: 25px; border-radius: 20px; text-align: center; }
+    .stat-card p { color: #a5b4fc; font-size: 11px; text-transform: uppercase; margin-bottom: 10px; }
+    .stat-value { font-size: 28px; font-weight: 800; color: #fff; }
+
+    .search-section { display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; }
+    input, select { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 12px; padding: 12px 15px; color: #fff; outline: none; }
+    .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; border: none; border-radius: 12px; padding: 12px 25px; cursor: pointer; font-weight: 600; }
+
+    .users-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+    th { color: #a5b4fc; text-transform: uppercase; font-size: 12px; padding: 15px; text-align: left; }
+    tr { background: rgba(15, 23, 42, 0.4); transition: 0.3s; }
+    tr:hover { background: rgba(99, 102, 241, 0.1); }
+    td { padding: 15px; color: #e0e7ff; }
+
+    .user-role { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .user-role.customer { background: rgba(79, 172, 254, 0.1); color: #4facfe; }
+    .user-role.admin { background: rgba(245, 87, 108, 0.1); color: #f5576c; }
+
+    .modal, .confirm-dialog { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); align-items: center; justify-content: center; }
+    .modal.show, .confirm-dialog.show { display: flex; }
+    .modal-content, .confirm-content { background: #0f172a; padding: 40px; border-radius: 28px; border: 1px solid #6366f1; width: 90%; max-width: 500px; }
+
+    .message { padding: 15px; border-radius: 12px; margin-bottom: 20px; display: none; text-align: center; font-size: 14px; }
+    .message.success { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid #10b981; }
+    .message.error { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid #ef4444; }
+    .message.show { display: block; }
+
+    .btn-view { background: rgba(79, 172, 254, 0.1); color: #4facfe; border: 1px solid #4facfe; cursor: pointer; padding: 8px 15px; border-radius: 8px; margin-right: 5px; }
+    .btn-delete { background: rgba(245, 87, 108, 0.1); color: #f5576c; border: 1px solid #f5576c; cursor: pointer; padding: 8px 15px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+<div class="grid-background"></div>
+<div class="container">
+  <div class="header">
+    <h1>VBS Admin</h1>
+    <div class="header-buttons">
+      <button class="btn-header" onclick="goToHistory()">History</button>
+      <button class="btn-header" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div id="adminMessage" class="message"></div>
+    <div class="section-header">
+      <h2>Admin Dashboard</h2>
+      <button class="btn-primary" onclick="openAddUserModal()">➕ Add New User</button>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card"><p>Total Users</p><div class="stat-value" id="totalUsers">0</div></div>
+      <div class="stat-card"><p>Total Balance</p><div class="stat-value">₹<span id="totalBalance">0</span></div></div>
+      <div class="stat-card"><p>Avg Balance</p><div class="stat-value">₹<span id="avgBalance">0</span></div></div>
+      <div class="stat-card"><p>Active Users</p><div class="stat-value" id="activeUsers">0</div></div>
+    </div>
+
+    <div class="search-section">
+      <input type="text" id="searchInput" placeholder="Search by username..." style="flex:1">
+      <button class="btn-primary" onclick="searchUsers()">Search</button>
+      <select id="sortBy" onchange="applySort()"><option value="id">ID</option><option value="name">Name</option><option value="balance">Balance</option></select>
+      <select id="sortOrder" onchange="applySort()"><option value="asc">Asc ↑</option><option value="desc">Desc ↓</option></select>
+    </div>
+
+    <div class="users-section">
+      <table class="users-table">
+        <thead>
+        <tr><th>ID</th><th>Name</th><th>Username</th><th>Email</th><th>Role</th><th>Balance</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="usersTableBody">
+        <tr><td colspan="7" style="text-align:center">Loading...</td></tr>
+        </tbody>
+      </table>
+      <div id="paginationControls" style="text-align:center; margin-top:20px;"></div>
+    </div>
+  </div>
+</div>
+
+<div id="viewUserModal" class="modal">
+  <div class="modal-content">
+    <h2 style="color:#fff; margin-bottom:20px">User Details</h2>
+    <div id="userDetailsContent" style="color:#e0e7ff; line-height:2.2"></div>
+    <button class="btn-primary" style="margin-top:20px; width:100%" onclick="closeViewUserModal()">Close</button>
+  </div>
+</div>
+
+<div id="addUserModal" class="modal">
+  <div class="modal-content">
+    <h2 style="color:#fff; margin-bottom:20px">Add User</h2>
+    <div id="addUserMessage" class="message"></div>
+    <form id="addUserForm" onsubmit="handleAddUser(event)">
+      <input type="text" id="addName" placeholder="Full Name" required style="width:100%; margin-bottom:15px">
+      <input type="text" id="addUsername" placeholder="Username" required style="width:100%; margin-bottom:15px">
+      <input type="email" id="addEmail" placeholder="Email" required style="width:100%; margin-bottom:15px">
+      <input type="password" id="addPassword" placeholder="Password" required style="width:100%; margin-bottom:15px">
+      <input type="number" id="addBalance" placeholder="Initial Balance" required style="width:100%; margin-bottom:15px">
+      <select id="addRole" style="width:100%; margin-bottom:20px"><option value="customer">Customer</option><option value="admin">Admin</option></select>
+      <div style="display:flex; gap:10px">
+        <button type="submit" class="btn-primary" style="flex:1">Create</button>
+        <button type="button" class="btn-header" style="flex:1" onclick="closeAddUserModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="deleteConfirmDialog" class="confirm-dialog">
+  <div class="confirm-content" style="text-align:center">
+    <div style="font-size:50px; margin-bottom:15px">⚠️</div>
+    <h2 style="color:#fff; margin-bottom:10px">Delete User?</h2>
+    <div id="deleteUserMessage" class="message"></div>
+    <p id="deleteConfirmText" style="color:#94a3b8; margin-bottom:30px"></p>
+    <div style="display:flex; gap:10px">
+      <button class="btn-delete" style="flex:1; padding:12px" onclick="deleteUser()">Delete</button>
+      <button class="btn-header" style="flex:1" onclick="closeDeleteConfirm()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API_URL = 'http://localhost:8081';
+  let userId = localStorage.getItem("userId");
+  let allUsers = [];
+  let filteredUsers = [];
+  const itemsPerPage = 10;
+  let currentPage = 1;
+  let deleteTarget = null;
+
+  function getUserIdFromURL() {
+      const role = (localStorage.getItem("role") || '').toLowerCase();
+      if (!userId) { window.location.href = 'login.html'; return; }
+      if (role !== 'admin') { alert("Unauthorized access"); window.location.href = 'login.html'; }
+  }
+
+  async function loadAllUsers(sortBy = 'id', order = 'asc') {
+      try {
+          const response = await fetch(`${API_URL}/users?sortBy=${sortBy}&order=${order}`);
+          allUsers = await response.json();
+          filteredUsers = [...allUsers];
+          updateStatistics();
+          displayUsers(filteredUsers);
+      } catch (error) { showMessage('adminMessage', 'Failed to load users', 'error'); }
+  }
+
+  function updateStatistics() {
+      const total = allUsers.length;
+      const balance = allUsers.reduce((sum, u) => sum + u.balance, 0);
+      document.getElementById('totalUsers').textContent = total;
+      document.getElementById('totalBalance').textContent = balance.toFixed(2);
+      document.getElementById('avgBalance').textContent = (total ? balance/total : 0).toFixed(2);
+      document.getElementById('activeUsers').textContent = allUsers.filter(u => u.balance > 0).length;
+  }
+
+  function displayUsers(users) {
+      const body = document.getElementById('usersTableBody');
+      if (users.length === 0) { body.innerHTML = '<tr><td colspan="7" style="text-align:center">No users found</td></tr>'; return; }
+      const start = (currentPage - 1) * itemsPerPage;
+      const slice = users.slice(start, start + itemsPerPage);
+
+      body.innerHTML = slice.map(u => `
+          <tr>
+              <td>#${u.id}</td>
+              <td>${u.name}</td>
+              <td>${u.username}</td>
+              <td>${u.email}</td>
+              <td><span class="user-role ${u.role.toLowerCase()}">${u.role}</span></td>
+              <td style="color:#4facfe; font-weight:700">₹${u.balance.toFixed(2)}</td>
+              <td>
+                  <button class="btn-view" onclick="viewUser(${u.id})">View</button>
+                  <button class="btn-delete" onclick="confirmDeleteUser(${u.id}, '${u.name}')">Delete</button>
+              </td>
+          </tr>
+      `).join('');
+      setupPagination(users.length);
+  }
+
+  function viewUser(id) {
+      const u = allUsers.find(x => x.id === id);
+      if (!u) return;
+      document.getElementById('userDetailsContent').innerHTML = `<p><strong>ID:</strong> #${u.id}</p><p><strong>Full Name:</strong> ${u.name}</p><p><strong>Username:</strong> ${u.username}</p><p><strong>Email:</strong> ${u.email}</p><p><strong>Role:</strong> ${u.role}</p><p><strong>Balance:</strong> ₹${u.balance.toFixed(2)}</p>`;
+      document.getElementById('viewUserModal').classList.add('show');
+  }
+
+  function closeViewUserModal() { document.getElementById('viewUserModal').classList.remove('show'); }
+
+  async function handleAddUser(e) {
+      e.preventDefault();
+      const data = {
+          id: 0,
+          name: document.getElementById('addName').value,
+          username: document.getElementById('addUsername').value,
+          email: document.getElementById('addEmail').value,
+          password: document.getElementById('addPassword').value,
+          balance: parseFloat(document.getElementById('addBalance').value),
+          role: document.getElementById('addRole').value
+      };
+      try {
+          const res = await fetch(`${API_URL}/add/${userId}`, {
+              method: 'POST',
+              headers: {'Content-Type':'application/json'},
+              body: JSON.stringify(data)
+          });
+          const resultText = await res.text();
+
+          if(res.ok) {
+              showMessage('adminMessage', 'User Created Successfully!', 'success');
+              closeAddUserModal();
+              loadAllUsers();
+          } else {
+              // This catches backend error messages (e.g., Email already exists)
+              // and shows them inside the modal box
+              showMessage('addUserMessage', resultText, 'error');
+          }
+      } catch (err) {
+          showMessage('addUserMessage', 'Error adding user', 'error');
+      }
+  }
+
+  function confirmDeleteUser(id, name) {
+      deleteTarget = id;
+      document.getElementById('deleteUserMessage').classList.remove('show');
+      document.getElementById('deleteConfirmText').textContent = `Are you sure you want to delete ${name}?`;
+      document.getElementById('deleteConfirmDialog').classList.add('show');
+  }
+
+  async function deleteUser() {
+      try {
+          const res = await fetch(`${API_URL}/delete-user/${deleteTarget}/admin/${userId}`, { method: 'DELETE' });
+          const msg = await res.text();
+          if (res.ok && !msg.toLowerCase().includes('empty') && !msg.toLowerCase().includes('zero')) {
+              showMessage('adminMessage', msg, 'success');
+              closeDeleteConfirm();
+              loadAllUsers();
+          }
+          else { showMessage('deleteUserMessage', msg, 'error'); }
+      } catch (err) { showMessage('deleteUserMessage', 'Error deleting user', 'error'); }
+  }
+
+  function closeDeleteConfirm() { document.getElementById('deleteConfirmDialog').classList.remove('show'); }
+  function openAddUserModal() {
+      document.getElementById('addUserMessage').classList.remove('show');
+      document.getElementById('addUserModal').classList.add('show');
+  }
+  function closeAddUserModal() { document.getElementById('addUserModal').classList.remove('show'); document.getElementById('addUserForm').reset(); }
+
+  function applySort() { loadAllUsers(document.getElementById('sortBy').value, document.getElementById('sortOrder').value); }
+  async function searchUsers() {
+      const term = document.getElementById('searchInput').value.trim();
+      if (!term) { loadAllUsers(); return; }
+      const res = await fetch(`${API_URL}/users/${encodeURIComponent(term)}`);
+      filteredUsers = await res.json();
+      currentPage = 1; displayUsers(filteredUsers);
+  }
+
+  function showMessage(id, text, type) {
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.textContent = text;
+      el.className = `message ${type} show`;
+      if(type === 'success') setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  function setupPagination(total) {
+      const pages = Math.ceil(total / itemsPerPage);
+      const container = document.getElementById('paginationControls');
+      let html = '';
+      for(let i=1; i<=pages; i++) { html += `<button class="btn-header ${i===currentPage?'active':''}" style="margin:2px; min-width:40px" onclick="goToPage(${i})">${i}</button>`; }
+      container.innerHTML = html;
+  }
+  function goToPage(p) { currentPage = p; displayUsers(filteredUsers); }
+  function logout() { localStorage.clear(); window.location.href = 'home.html'; }
+  function goToHistory() { window.location.href = `history.html?id=${userId}&role=admin`; }
+
+  window.onload = () => { getUserIdFromURL(); loadAllUsers(); };
+</script>
+</body>
+</html>
